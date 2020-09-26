@@ -37,7 +37,7 @@ def movie2frames(video_path, dir_path, basename, ext='jpg'):
         else:
             return
 
-def frames2movies(video_name, dir_path, basename, frame_ext='jpg', video_path='./'):
+def frames2movie(video_name, dir_path, basename, frame_ext='jpg', video_path='./'):
     """ディレクトリ内の全てのフレームを使って動画を生成する。
     【引数】
         video_name: 生成する動画のファイル名。拡張子付き。
