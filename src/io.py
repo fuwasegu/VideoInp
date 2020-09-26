@@ -37,28 +37,32 @@ def movie2frames(video_path, dir_path, basename, ext='jpg'):
         else:
             return
 
-def frames2movies(video_name, dir_path, basename, h_size, w_size, frame_ext='jpg', video_path='./'):
+def frames2movies(video_name, dir_path, basename, frame_ext='jpg', video_path='./'):
     """ディレクトリ内の全てのフレームを使って動画を生成する。
     【引数】
         video_name: 生成する動画のファイル名。拡張子付き。
-        video_path: 動画を保存するディレクトリのパス。デフォルトはカレントディレクトリ。
         dir_path: 動画生成に使用するフレームのディレクトリパス
         basename: 動画生成に使用するフレームのファイル名の共通部分
-        h_size: 動画の高さ
-        w_size: 動画の幅
         frame_ext: 動画生成に使用するフレームの拡張子。デフォルトはjpg。
+        video_path: 動画を保存するディレクトリのパス。デフォルトはカレントディレクトリ。
 
     【返り値】
         なし
 
     【使用例】
-        >>> frame2movies('movie.mp4', 'frmames/', 'frame', 480, 640, 'png')
+        >>> frame2movies('movie.mp4', 'frmames/', 'frame', 'png')
         ./movie.mp4
     """
-    
-    size = (w_size, h_size)
-    out = cv2.VideoWriter(video_path+video_name, cv2.VideoWriter_fourcc(*'MP4V'), 5.0, size)
+    img_array = []
 
-    for i in glob.glob(dir_path + basename + '*.' + frame_ext):
-        out.write(cv2.imread(i))
+    for filename in sorted(glob.glob(dir_path + basename + '*.' + frame_ext)):
+        img = cv2.imread(filename)
+        height, width, layers = img.shape
+        size = (width, height)
+        img_array.append(img)
+
+    out = cv2.VideoWriter(video_path+video_name, 0x7634706d, 30, size)
+
+    for i in range(len(img_array)):
+        out.write(img_array[i])
     out.release()
