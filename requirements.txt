@@ -1,0 +1,5 @@
+matplotlib == 3.2.2
+numpy == 1.18.5
+opencv-contrib-python == 4.2.0.34
+tqdm == 4.47.0
+pyclustering == 0.9.3.1
