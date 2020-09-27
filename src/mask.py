@@ -40,7 +40,7 @@ def make_detail_mask(dir_path, mask_path, frame_ext='jpg', frame_num=100, thresh
     for frame in tqdm(sorted(glob.glob(dir_path + '*.' + frame_ext))):
         frames.append(cv2.imread(frame, cv2.IMREAD_GRAYSCALE))
         frame_counter -= 1
-        if frame_counter <= 0:
+        if frame_counter < 0:
             break
     
     height = frames[0].shape[0]
