@@ -70,3 +70,23 @@ def frames2movie(video_name, dir_path, basename, fps=30, frame_ext='jpg', video_
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
+
+def read_frames(frames_dir_path, frame_ext):
+    """フレームを全て読み込む
+    【引数】
+        frames_dir_path: フレームがあるディレクトリのパス
+        frame_ext: フレーム画像の拡張子
+
+    【戻り値】
+        frames: フレーム画像が格納されたリスト
+            frames = [img1, img2, img3, ...]
+    
+    """
+
+    frames = []
+
+    for filename in sorted(glob.glob(frames_dir_path + '*.' + frame_ext)):
+        frame = cv2.imread(filename)
+        frames.append(frame)
+    
+    return frames
