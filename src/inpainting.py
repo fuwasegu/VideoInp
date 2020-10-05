@@ -108,8 +108,24 @@ def interpolation(target_img, frame_img, frame_mask_img, over_writtenable_mask_i
                 target_img[i, j] = frame_img[i, j]
                 over_writtenable_mask_img[i, j] = BLACK
 
-def get_homography_frames(target_img):
+def get_homography_frames(target_img, target_index,in_framse_dir_path):
+    """
+    """
+    homography_frames = []
+
+
     pass
+
+def zigzag(center):
+    """
+    """
+    result = []
+    for i in range(center*2):
+        if i % 2 == 0:
+            i = i * (-1)
+        center = center + 1
+        result.append(center)
+    return result
 
 def inpaint_frames(in_framse_dir_path, out_frame_dir_path, mask_path):
     pass
