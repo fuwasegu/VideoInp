@@ -166,16 +166,29 @@ def interpolation(target_img, frame_img, frame_mask_img, over_writtenable_mask_i
                 target_img[i, j] = frame_img[i, j]
                 over_writtenable_mask_img[i, j] = BLACK
 
-def get_homography_frames(target_img_path, target_index,in_frames_dir_path, frame_ext):
+def get_homography_frames(target_img_path, target_index,in_frames_dir_path, frame_ext='jpg'):
     """
+    【返り値】
+	    result: [変換後のフレーム[
+                    [射影変換後のフレーム画像, 射影変換後のマスク画像], 
+                        [射影変換後のフレーム画像, 射影変換後のマスク画像], ...
+                    ], 
+                    加重平均用のフレーム距離[int, int, int, ...]
+                ]
     """
     homography_frames = []
     mask_img_path = '../mask.jpg'
     frame_name_list = sorted(glob.glob(in_frames_dir_path + '*.' + frame_ext))
     last_frame_index = 0
     zigzag_list = zigzag(target_index)
+
+    #加重平均用のフレーム距離
+    weights = []
+    weight = 0
+    counter = 0
     
     for i in zigzag_list:
+        counter = counter + 1
         if i == target_index:
             continue
 
@@ -186,6 +199,10 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, fram
         else:
             homography_frames.append(frame)
             last_frame_index = i
+            if counter % 2 == 0:
+                weight = weight + 1
+            weights.append(weight)
+
     
     if i == 0:
         i = target_index*2 + 1
@@ -196,33 +213,38 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, fram
             else:
                 homography_frames.append(frame)
                 i = i + 1
+                weights.append(weight)
+            weight = weight + 1
     else:
-        if i % 2 == 0:
+        if zigzag_list.index(i)+1 % 2 == 0:
             last_index = zigzag_list.index(i)
             start_index = target_index*2 - last_index + 1
             while start_index >= 0:
+                weight = weight + 1
                 frame = getHomography(target_img_path, frame_name_list[i], mask_img_path)
                 if frame == False:
                     break
                 else:
                     homography_frames.append(frame)
                     i = i - 1
+                    weights.append(weight)
         else:
-            while start_index >= 0:
+            while i >= 0:
                 frame = getHomography(target_img_path, frame_name_list[i], mask_img_path)
                 if frame == False:
                     break
                 else:
                     homography_frames.append(frame)
                     i = i - 1
+                    weights.append(weight)
+                weight = weight + 1
 
-    return homography_frames
-
-
-
-
-
-    
+    max_weight = weights[-1] + 1
+    weights_result = [max_weight - i for i in weights]
+    result = []
+    result.append(homography_frames)
+    result.append(weights_result)
+    return result
 
 def zigzag(center):
     """ジグザグにリストを返す。
@@ -239,38 +261,52 @@ def zigzag(center):
         result.append(center)
     return result
 
-def inpaint_frames(in_framse_dir_path, out_frame_dir_path, mask_path):
-    pass
+def inpaint_target(target_img, in_frames, mask_img):
+    """
+    【引数】
+        target_img: ターゲットフレームの画像
+        in_frames: 射影変換後のフレーム画像を格納したリスト
+        mask_img: マスク画像のデータ
 
+    【返り値】
+        inpainted_target: インペインティング後のターゲット画像
+    
+    """
+    heght = mask_img.shape[0]
+    width = mask_img.shape[1]
+    weight_list = in_frames[1]
+    inpainted_target = target_img
 
-
-
-"""
-if __name__ == "__main__":
-    mask = cv2.imread('mask2.png')
-    IMG_HEIGHT = mask.shape[0]
-    IMG_WIDTH = mask.shape[1]
-    BLACK = np.array([0, 0, 0])
-    WHITE = np.array([255, 255, 255])
-    path = '../frames/'
-    files = os.listdir(path)
-    fileCount = len(files)
-
-    for target in tqdm(range(50, 51)):
-        target_img_path = '../frames/img' + str(target) + '.jpg'
-        target_img = cv2.imread(target_img_path)
-        target_mask_img = cv2.imread('../../mask.jpg')
-
-        for frame in tqdm(range(fileCount)):
-            if frame == target:
-                pass
+    print('inpainting target frame...')
+    for i in tqdm(range(heght)):
+        for j in range(width):
+            pixel_b = []
+            pixel_g = []
+            pixel_r = []
+            weight = []
+            for index, img in enumerate(in_frames[0]):
+                frame = img[0]
+                frame_mask = img[1]
+                #マスクが白で、フレームが黒くない
+                if mask_img[i, j][0] == 255 and mask_img[i, j][1] == 255 and mask_img[i, j][2] == 255:
+                    if not(frame_mask[i, j][0] == 255 and frame_mask[i, j][1] == 255 and frame_mask[i, j][2] == 255):
+                        if not(frame[i, j][0] == 0 and frame[i, j][1] == 0 and frame[i, j][2] == 0):
+                            pixel_b.append(frame[i, j][0])
+                            pixel_g.append(frame[i, j][1])
+                            pixel_r.append(frame[i, j][2])
+                            weight.append(weight_list[index])
+                        else:
+                            pass
+                    else:
+                        pass
+                else:
+                    pass
+            if len(weight) > 0:
+                inpainted_target[i, j][0] = np.average(pixel_b, weights=weight)
+                inpainted_target[i, j][1] = np.average(pixel_g, weights=weight)
+                inpainted_target[i, j][2] = np.average(pixel_r, weights=weight)
             else:
-                imgs = getHomography(target_img_path, '../frames/img' + str(frame) + '.jpg', '../../mask.jpg')
-                interpolation(target_img, imgs[0], imgs[1], target_mask_img)
-                rate = calc_interpolation_rate(target_mask_img)
-                if rate < 1:
-                    break
-        
-        cv2.imwrite('../../new_frames/' + str(target) + '.jpg', target_img)
-        cv2.imwrite('../../new_masks/' + str(target) + '.jpg', target_mask_img)
-"""
+                pass
+
+    print('done.')
+    return inpainted_target
