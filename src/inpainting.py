@@ -166,7 +166,7 @@ def interpolation(target_img, frame_img, frame_mask_img, over_writtenable_mask_i
                 target_img[i, j] = frame_img[i, j]
                 over_writtenable_mask_img[i, j] = BLACK
 
-def get_homography_frames(target_img_path, target_index,in_frames_dir_path, frame_ext='jpg'):
+def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask_img_path, frame_ext='jpg'):
     """
     【返り値】
 	    result: [変換後のフレーム[
@@ -177,7 +177,6 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, fram
                 ]
     """
     homography_frames = []
-    mask_img_path = '../mask.jpg'
     frame_name_list = sorted(glob.glob(in_frames_dir_path + '*.' + frame_ext))
     last_frame_index = 0
     zigzag_list = zigzag(target_index)
@@ -261,8 +260,8 @@ def zigzag(center):
         result.append(center)
     return result
 
-def inpaint_target(target_img, in_frames, mask_img):
-    """
+def inpaint_target_ave(target_img, in_frames, mask_img):
+    """加重平均で補間
     【引数】
         target_img: ターゲットフレームの画像
         in_frames: 射影変換後のフレーム画像を格納したリスト
@@ -310,3 +309,123 @@ def inpaint_target(target_img, in_frames, mask_img):
 
     print('done.')
     return inpainted_target
+
+def inpaint_target_direct(target_img, in_frames, mask_img):
+    """一番近い画素で補間
+    【引数】
+        target_img: ターゲットフレームの画像
+        in_frames: 射影変換後のフレーム画像を格納したリスト
+        mask_img: マスク画像のデータ
+
+    【返り値】
+        inpainted_target: インペインティング後のターゲット画像
+    
+    """
+    heght = mask_img.shape[0]
+    width = mask_img.shape[1]
+    weight_list = in_frames[1]
+    inpainted_target = target_img
+
+    for index, img in enumerate(in_frames[0]):
+        frame = img[0]
+        frame_mask = img[1]
+        mask_list = np.argwhere(frame_mask == 255)
+        for i_j in mask_list:
+            i = i_j[0]
+            j = i_j[1]
+            frame[i, j][0] = 0
+            frame[i, j][1] = 0
+            frame[i, j][2] = 0
+        in_frames[0][index] = frame
+
+    print('inpainting target frame...')
+    white_point = np.argwhere(mask_img == 255)
+
+    for index, i_j in enumerate(white_point):
+
+        i = i_j[0]
+        j = i_j[1]
+        for img in in_frames[0]:
+            if not(img[i, j][0] == 0 and img[i, j][1] == 0 and img[i, j][2] == 0):
+                inpainted_target[i, j][0] = img[i, j][0]
+                inpainted_target[i, j][1] = img[i, j][1]
+                inpainted_target[i, j][2] = img[i, j][2]
+                mask_img[i, j][0] = 0
+                mask_img[i, j][1] = 0
+                mask_img[i, j][2] = 0
+                break
+
+    print('done.')
+    return inpainted_target
+
+def inpaint_target_ave_neer(target_img, in_frames, mask_img):
+    """加重平均値が最も近い実データ画素値で補間
+    【引数】
+        target_img: ターゲットフレームの画像
+        in_frames: 射影変換後のフレーム画像を格納したリスト
+        mask_img: マスク画像のデータ
+
+    【返り値】
+        inpainted_target: インペインティング後のターゲット画像
+    
+    """
+    heght = mask_img.shape[0]
+    width = mask_img.shape[1]
+    weight_list = in_frames[1]
+    inpainted_target = target_img
+
+    print('inpainting target frame...')
+    for i in tqdm(range(heght)):
+        for j in range(width):
+            pixel_b = []
+            pixel_g = []
+            pixel_r = []
+            weight = []
+            pixel_list_b = []
+            pixel_list_g = []
+            pixel_list_r = []
+            for index, img in enumerate(in_frames[0]):
+                frame = img[0]
+                frame_mask = img[1]
+                
+                pixel_list_b.append(frame[i, j][0])
+                
+                pixel_list_g.append(frame[i, j][1])
+                
+                pixel_list_r.append(frame[i, j][2])
+
+                #マスクが白で、フレームが黒くない
+                if mask_img[i, j][0] == 255 and mask_img[i, j][1] == 255 and mask_img[i, j][2] == 255:
+                    if not(frame_mask[i, j][0] == 255 and frame_mask[i, j][1] == 255 and frame_mask[i, j][2] == 255):
+                        if not(frame[i, j][0] == 0 and frame[i, j][1] == 0 and frame[i, j][2] == 0):
+                            pixel_b.append(frame[i, j][0])
+                            pixel_g.append(frame[i, j][1])
+                            pixel_r.append(frame[i, j][2])
+                            weight.append(weight_list[index])
+                        else:
+                            pass
+                    else:
+                        pass
+                else:
+                    pass
+            if len(weight) > 0:
+                inpainted_target[i, j][0] = getNearestValue(pixel_list_b, np.average(pixel_b, weights=weight))
+                inpainted_target[i, j][1] = getNearestValue(pixel_list_g, np.average(pixel_g, weights=weight))
+                inpainted_target[i, j][2] = getNearestValue(pixel_list_r, np.average(pixel_r, weights=weight))
+            else:
+                pass
+
+    print('done.')
+    return inpainted_target
+
+def getNearestValue(list, num):
+    """
+    概要: リストからある値に最も近い値を返却する関数
+    @param list: データ配列
+    @param num: 対象値
+    @return 対象値に最も近い値
+    """
+
+    # リスト要素と対象値の差分を計算し最小値のインデックスを取得
+    idx = np.abs(np.asarray(list) - num).argmin()
+    return list[idx]
