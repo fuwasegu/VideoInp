@@ -1,3 +1,5 @@
 #画像ファイル
 /frames
 test.py
+makeMovie.py
+run.sh
