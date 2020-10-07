@@ -37,7 +37,7 @@ def make_detail_mask(dir_path, mask_path, frame_ext='jpg', frame_num=100, thresh
     frames = []
     frame_counter = frame_num
     print('Loading frames...')
-    for frame in tqdm(sorted(glob.glob(dir_path + '*.' + frame_ext))):
+    for frame in sorted(glob.glob(dir_path + '*.' + frame_ext)):
         frames.append(cv2.imread(frame, cv2.IMREAD_GRAYSCALE))
         frame_counter -= 1
         if frame_counter < 0:
