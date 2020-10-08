@@ -4,6 +4,7 @@
 import os
 import cv2
 import glob
+from tqdm import tqdm
 
 
 def movie2frames(video_path, dir_path, basename, ext='jpg'):
@@ -90,3 +91,53 @@ def read_frames(frames_dir_path, frame_ext):
         frames.append(frame)
     
     return frames
+
+def make_test_movie(in_movie_path, out_movie_dir_path):
+    """
+    """
+    
+    cap = cv2.VideoCapture(in_movie_path)
+
+    if not cap.isOpened():
+        return
+
+    os.makedirs(out_movie_dir_path, exist_ok=True)
+    digit = len(str(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))))
+    num = 1
+
+    input_frames = []
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            input_frames.append(frame)
+            num += 1
+        else:
+            break
+    
+
+    for index in range(1, 26):
+        print('Start creating movie No.'+str(index)+' ...')
+        original_frames = input_frames
+
+        height = int((original_frames[0].shape[0])/5)
+        width = int((original_frames[0]. shape[1])/5)
+
+        low = int(index/5)
+        column = int(index%5)-1
+
+        print('Drawing mask on pixels ...')
+        for img in tqdm(original_frames):
+            for i in range(height):
+                for j in range(width):
+                    img[i + low*height, j + column*width] = [0, 0, 0]
+
+        size = (width*5, height*5) 
+        out = cv2.VideoWriter(out_movie_dir_path+str(index)+'.mp4', 0x7634706d, 30, size)
+
+        print('Writing the movie ...')
+        for i in tqdm(range(len(original_frames))):
+            out.write(original_frames[i])
+        out.release()
+        print("done. next ->")
+    return
+
