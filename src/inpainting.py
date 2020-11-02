@@ -206,7 +206,11 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask
     if i == 0:
         i = target_index*2 + 1
         while True:
-            frame = getHomography(target_img_path, frame_name_list[i], mask_img_path)
+            if i < len(frame_name_list):
+                frame = getHomography(target_img_path, frame_name_list[i], mask_img_path)
+            else:
+                break
+            
             if frame == False:
                 break
             else:
