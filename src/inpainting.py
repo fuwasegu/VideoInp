@@ -167,6 +167,7 @@ def interpolation(target_img, frame_img, frame_mask_img, over_writtenable_mask_i
                 over_writtenable_mask_img[i, j] = BLACK
 
 def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask_img_path, frame_ext='jpg'):
+    print('in get_homo')
     """
     【返り値】
 	    result: [変換後のフレーム[
@@ -185,8 +186,8 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask
     weights = []
     weight = 0
     counter = 0
-    
-    for i in zigzag_list:
+    print('Checking neer frames for homography...')
+    for i in tqdm(zigzag_list):
         counter = counter + 1
         if i == target_index:
             continue
@@ -205,7 +206,11 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask
     
     if i == 0:
         i = target_index*2 + 1
+        count = 0
         while True:
+            count += 1
+            #if count > 20:
+                #break
             if i < len(frame_name_list):
                 frame = getHomography(target_img_path, frame_name_list[i], mask_img_path)
             else:
@@ -214,6 +219,12 @@ def get_homography_frames(target_img_path, target_index,in_frames_dir_path, mask
             if frame == False:
                 break
             else:
+                """
+                cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+                cv2.imshow('img', frame[0])
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                """
                 homography_frames.append(frame)
                 i = i + 1
                 weights.append(weight)
